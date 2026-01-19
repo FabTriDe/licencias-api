@@ -28,7 +28,7 @@ async function createLicense({
 }
 
 async function verifyLicense({ licencia_codigo, machine_id }) {
-  const machineHash = hashMachine(machine_id);
+  const machineHash = machine_id;
 
   const [rows] = await db.execute(
     `SELECT * FROM licencias WHERE licencia_codigo = ?`,
