@@ -48,3 +48,9 @@ exports.verify = async (req, res) => {
     });
   }
 };
+
+//PROBANDO
+app.get("/ping", (req, res) => {
+  console.log("📡 PING RECIBIDO DESDE ELECTRON");
+  res.json({ ok: true, message: "API viva" });
+});

@@ -28,12 +28,7 @@ async function createLicense({
 }
 
 async function verifyLicense({ licencia_codigo, machine_id }) {
-  console.log("🔥 VERIFY LICENSE HIT", {
-    licencia_codigo,
-    machine_id,
-  });
-
-  const machineHash = machine_id;
+  const machineHash = hashMachine(machine_id);
 
   const [rows] = await db.execute(
     `SELECT * FROM licencias WHERE licencia_codigo = ?`,
@@ -47,9 +42,6 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
   if (!lic.activa) throw new Error("LICENCIA_INACTIVA");
   if (new Date(lic.fecha_expiracion) < new Date())
     throw new Error("LICENCIA_EXPIRADA");
-
-  console.log("DB HASH:", lic.machine_id_hash);
-  console.log("RECIBIDO:", machine_id);
 
   if (lic.machine_id_hash !== machineHash)
     throw new Error("MAQUINA_NO_AUTORIZADA");
