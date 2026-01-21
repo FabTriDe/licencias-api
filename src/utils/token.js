@@ -4,7 +4,7 @@ function generateToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
-function tokenExpiration(days = 1) {
+function tokenExpiration(days = 30) {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d;
