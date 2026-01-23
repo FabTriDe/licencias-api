@@ -2,7 +2,7 @@ const db = require("../database/mysql");
 const { hashMachine } = require("../utils/machine");
 const { generateToken, tokenExpiration } = require("../utils/token");
 
-// ✅ Función para convertir a hora local (igual que en Electron)
+// ✅ Función para convertir a hora local
 function toLocalTime(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
     .toISOString()
@@ -21,7 +21,7 @@ async function createLicense({
   const fechaExp = new Date();
   fechaExp.setMonth(fechaExp.getMonth() + meses);
 
-  // ✅ Convertir a hora local del servidor
+  // ✅ Convertir a hora local
   const fechaExpLocal = toLocalTime(fechaExp);
 
   await db.execute(
@@ -39,12 +39,29 @@ async function createLicense({
 }
 
 async function verifyLicense({ licencia_codigo, machine_id }) {
-  // ... validaciones ...
+  const machineHash = hashMachine(machine_id);
+
+  const [rows] = await db.execute(
+    `SELECT * FROM licencias WHERE licencia_codigo = ?`,
+    [licencia_codigo],
+  );
+
+  if (!rows.length) throw new Error("LICENCIA_NO_EXISTE");
+
+  const lic = rows[0];
+
+  if (!lic.activa) throw new Error("LICENCIA_INACTIVA");
+  if (new Date(lic.fecha_expiracion) < new Date())
+    throw new Error("LICENCIA_EXPIRADA");
+
+  if (lic.machine_id_hash !== machineHash)
+    throw new Error("MAQUINA_NO_AUTORIZADA");
 
   const token = generateToken();
   const tokenExp = tokenExpiration(30);
 
-  const ahoraLocal = toLocalTime(new Date()); // ← Hora actual del servidor
+  // ✅ Convertir todas las fechas a hora local
+  const ahoraLocal = toLocalTime(new Date());
   const tokenExpLocal = toLocalTime(tokenExp);
 
   await db.execute(
@@ -52,12 +69,9 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
      SET token_actual = ?, 
          token_expira = ?, 
          ultima_verificacion = ?,
-         creado_en = ?,
-         actualizado_en = ?  -- ✅ Aquí se actualiza con hora local
+         actualizado_en = ?
      WHERE id = ?`,
-    [token, tokenExpLocal, ahoraLocal, ahoraLocal, ahoraLocal, lic.id],
-    //                                              ↑
-    //                           Hora local del dispositivo
+    [token, tokenExpLocal, ahoraLocal, ahoraLocal, lic.id],
   );
 
   return {
