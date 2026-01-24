@@ -28,6 +28,7 @@ async function createLicense({
   fechaExp.setMonth(fechaExp.getMonth() + meses);
 
   const fechaExpLocal = toColombiaTime(fechaExp);
+  const ahoraLocalInsertar = toColombiaTime(new Date());
 
   await db.execute(
     `INSERT INTO licencias (
@@ -35,9 +36,16 @@ async function createLicense({
       licencia_codigo,
       machine_id_hash,
       activa,
+      fecha_creacion,
       fecha_expiracion
     ) VALUES (?, ?, ?, 1, ?)`,
-    [cliente_id, licencia_codigo, machineHash, fechaExpLocal],
+    [
+      cliente_id,
+      licencia_codigo,
+      machineHash,
+      ahoraLocalInsertar,
+      fechaExpLocal,
+    ],
   );
 
   return { ok: true };
@@ -56,11 +64,11 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
   const lic = rows[0];
 
   if (!lic.activa) throw new Error("LICENCIA_INACTIVA");
-  
-  // ✅ CORREGIDO: Comparar ambas fechas en hora Colombia
+
+  // ✅ Comparar ambas fechas en hora Colombia
   const fechaExpiracion = new Date(lic.fecha_expiracion);
   const ahoraColombia = getNowColombia();
-  
+
   if (fechaExpiracion < ahoraColombia) {
     throw new Error("LICENCIA_EXPIRADA");
   }
@@ -79,9 +87,11 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
      SET token_actual = ?, 
          token_expira = ?, 
          ultima_verificacion = ?,
+         creado_en = ?,
          actualizado_en = ?
      WHERE id = ?`,
-    [token, tokenExpLocal, ahoraLocal, ahoraLocal, lic.id],
+    [token, tokenExpLocal, ahoraLocal, ahoraLocal, ahoraLocal, lic.id],
+    //                                  
   );
 
   return {
