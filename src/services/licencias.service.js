@@ -2,12 +2,18 @@ const db = require("../database/mysql");
 const { hashMachine } = require("../utils/machine");
 const { generateToken, tokenExpiration } = require("../utils/token");
 
-// ✅ Función para convertir a hora local
-function toLocalTime(date) {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+// ✅ Forzar hora Colombia (UTC-5)
+function toColombiaTime(date) {
+  const colombiaOffset = 5 * 60;
+  return new Date(date.getTime() - colombiaOffset * 60000)
     .toISOString()
     .replace("T", " ")
     .substring(0, 19);
+}
+
+// ✅ Obtener hora actual de Colombia (para comparaciones)
+function getNowColombia() {
+  return new Date(Date.now() - 5 * 60 * 60 * 1000);
 }
 
 async function createLicense({
@@ -21,8 +27,7 @@ async function createLicense({
   const fechaExp = new Date();
   fechaExp.setMonth(fechaExp.getMonth() + meses);
 
-  // ✅ Convertir a hora local
-  const fechaExpLocal = toLocalTime(fechaExp);
+  const fechaExpLocal = toColombiaTime(fechaExp);
 
   await db.execute(
     `INSERT INTO licencias (
@@ -51,8 +56,14 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
   const lic = rows[0];
 
   if (!lic.activa) throw new Error("LICENCIA_INACTIVA");
-  if (new Date(lic.fecha_expiracion) < new Date())
+  
+  // ✅ CORREGIDO: Comparar ambas fechas en hora Colombia
+  const fechaExpiracion = new Date(lic.fecha_expiracion);
+  const ahoraColombia = getNowColombia();
+  
+  if (fechaExpiracion < ahoraColombia) {
     throw new Error("LICENCIA_EXPIRADA");
+  }
 
   if (lic.machine_id_hash !== machineHash)
     throw new Error("MAQUINA_NO_AUTORIZADA");
@@ -60,9 +71,8 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
   const token = generateToken();
   const tokenExp = tokenExpiration(30);
 
-  // ✅ Convertir todas las fechas a hora local
-  const ahoraLocal = toLocalTime(new Date());
-  const tokenExpLocal = toLocalTime(tokenExp);
+  const ahoraLocal = toColombiaTime(new Date());
+  const tokenExpLocal = toColombiaTime(tokenExp);
 
   await db.execute(
     `UPDATE licencias
