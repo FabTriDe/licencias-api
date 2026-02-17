@@ -63,9 +63,13 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
 
   const lic = rows[0];
 
-  if (!lic.activa) throw new Error("LICENCIA_INACTIVA");
+  // ✅ Solo bloquea inactiva y pendiente_pago
+  // en_mora SÍ puede activarse (debe dinero pero sigue activa)
+  if (lic.activa === "inactiva") throw new Error("LICENCIA_INACTIVA");
+  if (lic.activa === "pendiente_pago")
+    throw new Error("LICENCIA_PENDIENTE_PAGO");
 
-  // ✅ Comparar ambas fechas en hora Colombia
+  // ✅ Pasa si es 'activa' o 'en_mora'
   const fechaExpiracion = new Date(lic.fecha_expiracion);
   const ahoraColombia = getNowColombia();
 
@@ -91,12 +95,12 @@ async function verifyLicense({ licencia_codigo, machine_id }) {
          actualizado_en = ?
      WHERE id = ?`,
     [token, tokenExpLocal, ahoraLocal, ahoraLocal, ahoraLocal, lic.id],
-    //                                  
   );
 
   return {
     token,
     tokenExpira: tokenExpLocal,
+    estado: lic.activa, // ✅ Devolver el estado para que el cliente sepa si está en mora
   };
 }
 

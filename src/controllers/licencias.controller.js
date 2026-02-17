@@ -34,12 +34,14 @@ exports.verify = async (req, res) => {
       ok: true,
       token: result.token,
       token_expira: result.tokenExpira,
+      estado: result.estado, // ✅ 'activa' o 'en_mora'
     });
   } catch (err) {
     const map = {
       LICENCIA_NO_EXISTE: 403,
       LICENCIA_INACTIVA: 403,
       LICENCIA_EXPIRADA: 403,
+      LICENCIA_PENDIENTE_PAGO: 403,
       MAQUINA_NO_AUTORIZADA: 403,
     };
 
